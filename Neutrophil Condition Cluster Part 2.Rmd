@@ -1,0 +1,81 @@
+---
+title: "Neutrophil Isolation"
+output: html_notebook
+---
+
+```{r}
+groups <- sample(c("healthy", "adjacent", "contralateral", "tumor"), size = 25633, replace = TRUE)
+names(groups) <- colnames(neutrophils.seu)
+neutrophils.seu <- AddMetaData(object = neutrophils.seu, metadata = groups, col.name = "group")
+obj.list <- SplitObject(neutrophils.seu, split.by = "group")
+
+```
+
+```{r}
+#Standard Processing and Clustering Workflow algorithm 
+
+reference.list <- obj.list[c("healthy", "adjacent", "contralateral", "tumor")]
+neutrophil.anchors <-FindIntegrationAnchors(object.list = reference.list, dims = 1:50)
+
+```
+
+```{r}
+neutrophil.integrated <-IntegrateData(anchorset = neutrophil.anchors, dims = 1:50)
+```
+
+
+```{r}
+```
+
+```{r}
+library(ggplot2)
+library(cowplot)
+# switch to integrated assay. The variable features of this assay are automatically
+# set during IntegrateData
+DefaultAssay(neutrophil.integrated) <- "integrated"
+
+# Run the standard workflow for visualization and clustering
+neutrophil.integrated <- ScaleData(neutrophil.integrated, verbose = FALSE)
+neutrophil.integrated <- RunPCA(neutrophil.integrated, npcs = 30, verbose = FALSE)
+neutrophil.integrated <- FindNeighbors(neutrophil.integrated, dims = 1:10)
+neutrophil.integrated <- FindClusters(neutrophil.integrated, resolution = 0.5)
+neutrophil.integrated <- RunTSNE(neutrophil.integrated, reduction = "pca", dims = 1:30)
+p1 <- DimPlot(neutrophil.integrated, reduction = "tsne", group.by = "group")
+plot_grid(p1)
+
+
+
+#FindMarkers for Differential Expression Analysis
+
+tumor.markers = FindMarkers(neutrophil.integrated, ident.1 = 'tumor', assay = 'RNA', group.by = 'group')
+```
+
+
+```{r}
+neutrophil.markers <- FindMarkers(neutrophil.integrated, ident.1 = )
+```
+
+```{r}
+#SCT Transform Algorithm 
+
+groups <- sample(c("healthy", "adjacent", "contralateral", "tumor"), size = 25633, replace = TRUE)
+names(groups) <- colnames(neutrophils.seu)
+neutrophils.seu <- AddMetaData(object = neutrophils.seu, metadata = groups, col.name = "group")
+obj.list <- SplitObject(neutrophils.seu, split.by = "group")
+for (i in names(obj.list)) {
+    obj.list[[i]] <- SCTransform(obj.list[[i]], verbose = FALSE)
+}
+neutrophil.features <- SelectIntegrationFeatures(object.list = obj.list, nfeatures = 3000)
+neutrophil.list <- PrepSCTIntegration(object.list = obj.list, anchor.features = neutrophil.features)
+neutrophil.anchors <- FindIntegrationAnchors(object.list = obj.list, normalization.method = "SCT", 
+    anchor.features = neutrophil.features)
+neutrophil.integrated <- IntegrateData(anchorset = neutrophil.anchors, normalization.method = "SCT")
+
+neutrophil.integrated <- RunPCA(object = neutrophil.integrated, verbose = FALSE)
+neutrophil.integrated <- RunUMAP(object = neutrophil.integrated, dims = 1:30)
+
+
+```
+
+
+
